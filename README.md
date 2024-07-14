@@ -21,7 +21,7 @@ pip3 install -r requirements.txt
 
 Then update the following files with the correct db string
 
-1. **book-management/docker-compose.yml (line number 9)**
+1. **book-management/docker-compose.yml (line number 7)**
 2. **book-management/app/alembic.ini (line number 61)**
 
 Then need to run the alembic migration for database table creation. Run the following commands
