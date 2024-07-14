@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "book-management"
+version = "0.1.0"
+description = ""
+authors = ["Nirmal-Neel <nirmalborah93@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras=["all"], version="^0.111.0"}
+sqlalchemy = "^2.0.31"
+asyncpg = "0.29.0"
+pyjwt = {extras = ["crypto"], version="^2.8.0"}
+greenlet = "^3.0.3"
+redis = "5.0.7"
+
+
+[tool.poetry.group.dev.dependencies]
+uvicorn = "^0.23.2"
+pre-commit = "^3.4.0"
+black = "^23.9.1"
+flake8 = "^6.1.0"
+mypy = "^1.5.1"
+isort = "^5.12.0"
+pytest = "^7.4.2"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.21.1"
+
+
+[tool.poetry.group.migrations.dependencies]
+alembic = "^1.12.0"
+
+[tool.pytest.ini_options]
+pythonpath=[
+    "app"
+]
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
