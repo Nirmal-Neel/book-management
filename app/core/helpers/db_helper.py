@@ -1,10 +1,15 @@
-from typing import Sequence, Any
+from typing import Any, Sequence
 
-from sqlalchemy import insert, select, update, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from core.config import get_config
 from core.database.models import Book, Review, User
+from core.exceptions import HTTPException
+from core.logger import logger
 from core.schemas import BookSchema, ReviewSchema
+from sqlalchemy import delete, insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
+
+config = get_config()
 
 
 class DbHelper:
@@ -15,12 +20,26 @@ class DbHelper:
     def __init__(self, db_session: AsyncSession):
         self.session = db_session
 
+    async def execute_query(self, query):
+        try:
+            result = await self.session.execute(query)
+            return result
+        except Exception as e:
+            logger.error(e)
+            try:
+                await self.session.rollback()
+            finally:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    message="Something went wrong!",
+                )
+
     async def add_book_row(self, book: dict):
         """
         Inserts a book record and returns the generated id
         """
         query = insert(Book).values(**book).returning(Book)
-        result = await self.session.execute(query)
+        result = await self.execute_query(query)
         book = result.scalar_one()
         await self.session.commit()
         return book
@@ -32,7 +51,7 @@ class DbHelper:
         query = select(Book)
         for key, val in filters.items():
             query = query.where(getattr(Book, key) == val)
-        result = await self.session.execute(query)
+        result = await self.execute_query(query)
         book = result.scalar_one_or_none()
         return book
 
@@ -41,7 +60,7 @@ class DbHelper:
         Fetches all the books with pagination
         """
         query = select(Book).offset((current_page - 1) * page_size).limit(page_size)
-        result = await self.session.execute(query)
+        result = await self.execute_query(query)
         all_books = result.scalars().all()
         return all_books
 
@@ -49,8 +68,12 @@ class DbHelper:
         """
         Updates a book record with the provided values
         """
-        query = update(Book).where(Book.id == book_id).values(**payload.model_dump(exclude_none=True))
-        await self.session.execute(query)
+        query = (
+            update(Book)
+            .where(Book.id == book_id)
+            .values(**payload.model_dump(exclude_none=True))
+        )
+        await self.execute_query(query)
         await self.session.commit()
 
     async def delete_book_record(self, book_id: str):
@@ -58,7 +81,7 @@ class DbHelper:
         Deletes a book record from DB
         """
         query = delete(Book).where(Book.id == book_id)
-        await self.session.execute(query)
+        await self.execute_query(query)
         await self.session.commit()
 
     async def create_review_for_book(self, book_id: str, review: ReviewSchema):
@@ -66,7 +89,7 @@ class DbHelper:
         Creates a review record in DB
         """
         query = insert(Review).values(**{**review.model_dump(), "book_id": book_id})
-        await self.session.execute(query)
+        await self.execute_query(query)
         await self.session.commit()
 
     async def get_all_reviews_for_book(self, book_id: str):
@@ -74,7 +97,7 @@ class DbHelper:
         Fetches all reviews for a book
         """
         query = select(Book).where(Book.id == book_id)
-        result = await self.session.execute(query)
+        result = await self.execute_query(query)
         book = result.scalar_one_or_none()
         # Since we are using async sqlalchemy, we need to refresh the attributes
         # to load (lazy loading)
@@ -89,7 +112,7 @@ class DbHelper:
         Stores the summary of a book
         """
         query = update(Book).where(Book.id == book_id).values(summary=summary)
-        await self.session.execute(query)
+        await self.execute_query(query)
         await self.session.commit()
 
     async def get_user(self, filters: dict[str, Any]) -> User:
@@ -99,5 +122,5 @@ class DbHelper:
         query = select(User)
         for key, val in filters.items():
             query = query.where(getattr(User, key) == val)
-        result = await self.session.execute(query)
+        result = await self.execute_query(query)
         return result.scalar_one_or_none()
