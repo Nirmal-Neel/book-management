@@ -24,10 +24,11 @@ sudo openssl req -batch -x509 -nodes -days 365 \
 ```
 
 ## nginx configuration
+```
 sudo apt install nginx
 cd /etc/nginx/sites-enabled/
 sudo nano fastapi_nginx
-```
+
 server {
     listen 443 ssl;
     ssl on;
